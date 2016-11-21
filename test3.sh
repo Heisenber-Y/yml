@@ -1,8 +1,5 @@
 #!bin/bash
-#testing variables
-days=10
-guest="kate"
-echo "$guest checked in $days days ago"
-days=5
-guest="jess"
-echo "guest checked in $days days ago"
+var1=100
+var2=45
+var3=`echo "scale=4; $var1/$var2"|bc`
+echo the answer for this is $var3
