@@ -1,0 +1,119 @@
+#!/bin/bash
+
+#echo -e "\033[30m 黑色字 \033[0m"
+#echo -e "\033[31m 红色字 \033[0m"
+#echo -e "\033[32m 绿色字 \033[0m"
+#echo -e "\033[33m 黄色字 \033[0m"
+#echo -e "\033[34m 蓝色字 \033[0m"
+#echo -e "\033[35m 紫色字 \033[0m"
+#echo -e "\033[36m 天蓝字 \033[0m"
+#echo -e "\033[37m 白色字 \033[0m"
+#echo -e "\033[40;37m 黑底白字 \033[0m"
+#echo -e "\033[41;37m 红底白字 \033[0m"
+#echo -e "\033[42;37m 绿底白字 \033[0m"
+#echo -e "\033[43;37m 黄底白字 \033[0m"
+#echo -e "\033[44;37m 蓝底白字 \033[0m"
+#echo -e "\033[45;37m 紫底白字 \033[0m"
+#echo -e "\033[46;37m 天蓝底白字 \033[0m"
+#echo -e "\033[47;30m 白底黑字 \033[0m"
+
+# 获取毫秒级的时间戳
+get_timestamp_ms()
+{
+    timestamp=$(date +%s)
+    ns=$(date +%N)
+    echo $((timestamp*1000+ns/1000000))
+}
+
+# 数组拼接join操作: 如 join_by , (a b c) => a,b,c
+function join_by { local d=$1; shift; echo -n "$1"; shift; printf "%s" "${@/#/$d}"; }
+
+# elapsed time: 将差秒数格式化为 时:分:秒
+elapsed_time()
+{
+	SEC=$1
+	(( SEC < 60 )) && echo -e "[Elapsed time: \033[31m$SEC seconds\033[0m]"
+	(( SEC >= 60 && SEC < 3600 )) && {
+        MIN=$(( SEC / 60 ))
+        SEC=$(( SEC % 60 ))
+        echo -e "[Elapsed time: \033[31m$MIN min $SEC sec\033[0m]"
+    }
+	(( SEC > 3600 )) && {
+        HR=$(( SEC / 3600 ))
+        MIN=$(( (SEC % 3600) / 60 ))
+        SEC=$(( (SEC % 3600) % 60 ))
+        echo -e "[Elapsed time: \033[31m$HR hr $MIN min $SEC sec\033[0m]"
+    }
+}
+
+# log
+# $1: message
+# $2: log file
+log_info()
+{
+    CURR_DATE=$(date "+%Y-%m-%d %H:%M:%S")
+    CURR_USER=$(whoami)
+    let max_filesize=10*1024*1024
+    [ -f $2 ] && {
+        file_size=$(cat $2 | wc -c)
+        [ $max_filesize -le $file_size ] && mv $2 $2.1
+    }
+    echo -e "[$CURR_DATE\t$CURR_USER] [INFO]\t$1" >> $2
+}
+
+# $1: message
+# $2: log file
+log_error()
+{
+    CURR_DATE=$(date "+%Y-%m-%d %H:%M:%S")
+    CURR_USER=$(whoami)
+    let max_filesize=10*1024*1024
+    [ -f $2 ] && {
+        file_size=$(cat $2 | wc -c)
+        [ $max_filesize -le $file_size ] && mv $2 $2.1
+    }
+    echo -e "\033[31m [$CURR_DATE\t$CURR_USER] [ERROR]\t$1 \033[0m" >> $2
+}
+
+# 根据进程名称检查进程是否running
+# $1: 进程名称
+# return: 1:false; 0-true
+check_process_byname() {
+	echo "Checking if process $1 exists..."
+	[ "$1" = "" ]  && return 1
+	PROCESS_NUM=$(ps -ef | grep "$1" | grep -v "grep" | wc -l)
+	if [ $PROCESS_NUM -ge 1 ];
+	then
+	    return 0
+	else
+	    return 1
+	fi
+}
+
+# 根据进程号检查进程是否running
+# $1: 进程名称
+# return: 1:false; 0-true
+check_process_bypid() {
+	echo "Checking if process $1 exists..."
+	[ "$1" = "" ]  && return 1
+	pid=$1
+	ps -ax | awk '{ print $1 }' | grep -e "^${pid}$"
+	return $?
+}
+
+# sendEmail: mail & exit.
+sendEmail() {
+	scripttime=0;
+    START=$(date +%s)
+	END=$(date +%s)
+	DIFF=$(( $END - $START ))
+	if [ $DIFF -le 60 ]; then
+		scripttime="$DIFF seconds.";
+	else
+		DIFF=$(( $DIFF / 60 ))
+		scripttime="$DIFF minutes.";
+	fi;
+	content="$content. Exec Time: $scripttime"
+	echo $content | mail -s "$subject" $email_list
+	exit;
+}
